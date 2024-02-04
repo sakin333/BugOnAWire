@@ -18,10 +18,35 @@ bugJumpedImage.src = './assets/bugFly.png'
 
 //image for bird
 const birdImage = new Image();
-birdImage.src = './assets/birdd.png';
+birdImage.src = './assets/birdImage.png';
 
 const backgroundImage = new Image()
 backgroundImage.src = './assets/jungleBackground.png'
+
+const jumpSound = new Audio('assets/jumpSound.mp3')
+const leftrRightSound = new Audio('assets/leftright.mp3')
+const crashSound = new Audio('assets/crash.mp3')
+const gameMusic = new Audio('assets/gameMusic.mp3')
+const boingSound = new Audio('assets/boing.mp3')
+
+function playBackgroundMusic() {
+    gameMusic.loop = true
+    gameMusic.play()
+}
+
+function stopBackgroundMusic() {
+    gameMusic.pause()
+    gameMusic.currentTime = 0
+}
+
+const backgroundImages = []
+for(let i=1 ; i<=5 ; i++) {
+    const bgImage = new Image()
+    bgImage.src = `./assets/bg${i}.png`
+    backgroundImages.push(bgImage)
+}
+
+console.log(backgroundImages)
 
 let wires = []
 let startScreenBug = {
@@ -84,6 +109,7 @@ function jumpBug() {
     if(!startScreenBug.isJumping) {
         // console.log('jumping')
         // console.log(startScreenBug)
+        boingSound.play()
         startScreenBug.isJumping = true
         let jumpCount = 0
 
@@ -114,9 +140,9 @@ function fallBug() {
 function startGame() {
     gameState = 'playing'
     spawnPole()
-
     spawnBirdsLoop()
     drawGame()
+    playBackgroundMusic()
 }
 
 //draw pole at position (x,y)
@@ -130,7 +156,7 @@ function drawPole(x, y) {
 }
 
 function drawBird(x,y) {
-    ctx.drawImage(birdImage, x, y, 60, 60)
+    ctx.drawImage(birdImage, x, y, 100, 100)
 }
 
 
@@ -165,10 +191,10 @@ let randomWire
 function spawnBirds() {
         randomWire = Math.floor(Math.random() * wires.length)
         // let birdY = 0-Math.floor(Math.random() * 200);
-        let birdY = 0-(Math.random() * 200);
+        let birdY = 0-Math.floor((Math.random() * 200));
 
         let bird = {
-            x: wires[randomWire] - 12,
+            x: wires[randomWire]-40,
             y: birdY
         }
 
@@ -248,6 +274,7 @@ function drawBug(x,y) {
 function moveLeft() {
     if(bug.x > wires[0]) {
         bug.x -= 100
+        leftrRightSound.play()
     }
 }
 
@@ -255,6 +282,7 @@ function moveLeft() {
 function moveRight() {
     if(bug.x < wires[2]) {
         bug.x += 100
+        leftrRightSound.play()
     }
 }
 
@@ -264,6 +292,8 @@ function jump() {
         jumped = true
         bug.width = 50
         bug.height = 50
+
+        jumpSound.play()
     }
 
     setTimeout(() => {
@@ -281,21 +311,24 @@ function crashWith(birds) {
         if (wires[i] === bug.x + 20) {
             // console.log('inside',wires[i])
             for (let j = 0; j < birds.length; j++) {
-                if((wires[i] === birds[j].x + 12)) {
-                    // console.log(`wires: ${wires[i]} birdsx: ${birds[j].x + 12} bugx: ${bug.x + 20}`)
+                if((wires[i] === birds[j].x + 40)) {
+                    // console.log(`wires: ${wires[i]} birdsx: ${birds[j].x + 40} bugx: ${bug.x + 20}`)
                     let bugLeft = bug.x;
                     let bugRight = bug.x + bug.width;
                     let bugTop = bug.y + bug.height/3;
                     let bugBottom = bug.y + bug.height;
 
                     let birdLeft = birds[j].x;
-                    let birdRight = birds[j].x + 40;
-                    let birdTop = birds[j].y;
-                    let birdBottom = birds[j].y + 40;
+                    let birdRight = birds[j].x + 80;
+                    let birdTop = birds[j].y + 10;
+                    let birdBottom = birds[j].y + 80;
+                    console.log(`left: ${birdLeft} right: ${birdRight} top: ${birdTop} bottom: ${birdBottom}`)
                    
                     if (!(bugBottom < birdTop || bugTop > birdBottom || bugRight < birdLeft || bugLeft > birdRight)) {
                         console.log('function: ', crashed)
                         crashed = true;
+                        stopBackgroundMusic()
+                        crashSound.play()
                         break;
                     }
                 }
@@ -333,10 +366,28 @@ function crashWith(birds) {
 //     return crashed;
 // }
 
+let bgImageObj = {
+    currentBgIndex: 0,
+    nextBgIndex: 1,
+    bgPosY: 0
+}
+
 function drawGame() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // birds = []
+    // // Move the background images down
+    // bgImageObj.bgPosY += gameSpeed;
+    // // Draw the current background image
+    // ctx.drawImage(backgroundImages[bgImageObj.currentBgIndex], 0, bgImageObj.bgPosY, canvas.width, canvas.height);
+    // // Draw the next background image below the current one
+    // ctx.drawImage(backgroundImages[bgImageObj.nextBgIndex], 0, bgImageObj.bgPosY - canvas.height, canvas.width, canvas.height);
+    // // Check if the current background image has moved out of view
+    // if (bgImageObj.bgPosY >= canvas.height) {
+    //     // Switch to the next background image and reset position
+    //     bgImageObj.currentBgIndex = (bgImageObj.currentBgIndex + 1) % backgroundImages.length;
+    //     bgImageObj.nextBgIndex = (bgImageObj.nextBgIndex + 1) % backgroundImages.length;
+    //     bgImageObj.bgPosY = 0;
+    // }
 
     calculateTime();
 
@@ -361,7 +412,7 @@ function drawGame() {
     });
 
     // Draw birds
-    console.log(birds)
+    // console.log(birds)
     birds.forEach((bird) => {
         bird.y += gameSpeed;
         if (bird.y > canvas.height) {
@@ -508,6 +559,22 @@ function handleKeyDown(event) {
     }
 }
 
+function handleKeyUp(event) {
+    if(gameState === 'playing') {
+        switch(event.keyCode) {
+            case 37:
+                leftrRightSound.currentTime = 0
+                break;
+            case 39:
+                leftrRightSound.currentTime = 0
+                break;
+            case 38:
+                jumpSound.currentTime = 0
+                break
+        }
+    }
+}
+
 Promise.all([...bugFrames, bugJumpedImage, birdImage, startScreenBugImage].map(img => new Promise(resolve => img.onload = resolve)))
 .then(() => {
     myFont.load().then((font) => {
@@ -517,6 +584,7 @@ Promise.all([...bugFrames, bugJumpedImage, birdImage, startScreenBugImage].map(i
     // drawGame()
     // spawnPole()
     window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('keyup', handleKeyUp)
 })
 
 
